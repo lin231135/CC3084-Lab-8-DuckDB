@@ -119,7 +119,56 @@ generar los resultados principales.
 
 ## Como levantar el ambiente
 
-<!-- TODO (Ejercicio 1.5) -->
+### Repositorio base
+
+El repositorio base es el del docente (<https://github.com/menene/duckdb>). No
+hicimos fork porque el repositorio del equipo ya existia y su enlace ya habia
+sido entregado, asi que incorporamos el contenido del repositorio del docente
+dentro del nuestro, respetando su estructura. Donde el enunciado dice "clone su
+fork", el procedimiento con nuestro repositorio es este:
+
+```bash
+git clone https://github.com/lin231135/CC3084-Lab-8-DuckDB.git
+cd CC3084-Lab-8-DuckDB
+```
+
+### Pasos
+
+1. Abrir Docker Desktop (o iniciar el servicio de Docker) y esperar a que el
+   motor este listo (`docker info` debe responder sin errores).
+2. Construir y levantar los dos servicios desde la raiz del repositorio:
+
+   ```bash
+   docker compose up --build -d
+   ```
+
+3. Esperar a que Metabase termine de iniciar (la primera vez tarda uno o dos
+   minutos) y verificar:
+
+   ```bash
+   docker compose ps
+   curl http://127.0.0.1:3000/api/health   # {"status":"ok"}
+   ```
+
+4. Abrir los servicios en el navegador:
+
+   | Servicio | URL | Para que se usa |
+   |---|---|---|
+   | JupyterLab | <http://127.0.0.1:8888/lab> | notebooks y scripts, sin token |
+   | Metabase | <http://127.0.0.1:3000> | tablero (Ejercicio 7) |
+
+5. Para ejecutar comandos dentro del ambiente de analisis:
+
+   ```bash
+   docker exec -it lab8-lab bash
+   ```
+
+6. Para detener todo sin borrar nada: `docker compose down`.
+
+La carpeta `data/` se monta en `/workspace/data` dentro de los contenedores, y esa
+es la ruta que se usa desde Jupyter, los scripts y Metabase. El detalle de cada
+servicio, las versiones instaladas y el proposito de cada directorio esta en
+[docs/ejercicio_01.md](docs/ejercicio_01.md).
 
 ## Como descargar los datos
 

@@ -20,3 +20,13 @@ venv/
 Thumbs.db
 .idea/
 .vscode/
+
+# Material de referencia del curso (no se sube)
+Lab_8_DuckDB.pdf
+*.pdf
+estilo_escritura_javier.md
+prompt_lab8_duckdb.md
+
+# Base materializada de DuckDB
+*.duckdb
+*.duckdb.wal
