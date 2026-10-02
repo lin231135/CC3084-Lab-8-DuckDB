@@ -172,7 +172,30 @@ servicio, las versiones instaladas y el proposito de cada directorio esta en
 
 ## Como descargar los datos
 
-<!-- TODO (Ejercicios 2.6, 5.1 y 8.1) -->
+Los datos salen de los Parquet mensuales que publica la TLC. El script
+`scripts/download_data.py` corre dentro del contenedor `lab` (con el ambiente
+levantado, ver la seccion anterior) y guarda cada archivo en
+`data/raw/<tipo>/<anio>/`.
+
+```bash
+# amarillos y verdes de 2026 (valor por defecto)
+docker exec lab8-lab python scripts/download_data.py
+
+# otros anios y/o un solo tipo de taxi
+docker exec lab8-lab python scripts/download_data.py --years 2024 2026
+docker exec lab8-lab python scripts/download_data.py --years 2025 --taxi green
+
+# solo verificar lo que hay en disco contra el servidor, sin descargar
+docker exec lab8-lab python scripts/download_data.py --verify-only
+```
+
+El script le pregunta al servidor que meses estan publicados, descarga solo los
+que faltan o estan danados, y al final imprime una verificacion de completitud
+(meses publicados contra archivos legibles). Volver a ejecutarlo no re-descarga
+lo que ya esta bien. Al 12 de octubre de 2026 la TLC tenia publicados de enero a
+agosto de 2026, y por eso las comparaciones entre anios se hacen sobre los mismos
+meses. El detalle de los cambios, las pruebas y los resultados esta en
+[docs/ejercicio_02.md](docs/ejercicio_02.md).
 
 ## Como ejecutar el analisis
 
