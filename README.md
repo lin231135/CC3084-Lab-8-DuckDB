@@ -199,7 +199,21 @@ meses. El detalle de los cambios, las pruebas y los resultados esta en
 
 ## Como ejecutar el analisis
 
-<!-- TODO -->
+Las consultas viven en `sql/`, organizadas por ejercicio, y los notebooks en
+`notebooks/` las leen desde ahi en lugar de copiarlas. Con el ambiente levantado
+y los datos descargados, hay dos formas de ejecutar el Ejercicio 3:
+
+```bash
+# desde JupyterLab: abrir http://127.0.0.1:8888/lab y correr
+#   notebooks/ejercicio_03_consultas_parquet.ipynb
+
+# o desde la terminal, ejecutando el notebook completo
+docker exec lab8-lab sh -c "cd /workspace/notebooks && jupyter nbconvert --to notebook --execute --inplace ejercicio_03_consultas_parquet.ipynb"
+```
+
+Las rutas dentro de los archivos `.sql` son las del contenedor (`/workspace/data/...`).
+La explicacion de cada consulta y las decisiones tomadas estan en
+[docs/ejercicio_03.md](docs/ejercicio_03.md).
 
 ## Como reproducir los benchmarks
 
