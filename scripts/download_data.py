@@ -30,6 +30,8 @@ Comportamiento:
   - La descarga se hace sobre un nombre temporal (.part) y solo se renombra al
     terminar, despues de comprobar el tamano recibido, de modo que una
     interrupcion no deja archivos .parquet a medias.
+  - Tambien se descarga una vez la tabla de zonas de la TLC
+    (data/raw/zonas/taxi_zone_lookup.csv), que sirve para nombrar las zonas.
   - Al final se imprime una verificacion de completitud: meses esperados
     (los publicados) contra meses presentes y legibles en disco.
 """
@@ -45,6 +47,8 @@ ANIO_POR_DEFECTO = 2026
 TIPOS_TAXI = ("yellow", "green")
 URL_BASE = "https://d37ci6vzurychx.cloudfront.net/trip-data"
 DIR_DESTINO = Path("data/raw")
+URL_ZONAS = "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv"
+RUTA_ZONAS = DIR_DESTINO / "zonas" / "taxi_zone_lookup.csv"
 
 TIEMPO_ESPERA = 60          # segundos por peticion
 INTENTOS = 3                # intentos por archivo antes de darse por vencido
@@ -141,6 +145,34 @@ def descargar_archivo(url: str, destino: Path, tamano_esperado: int) -> int:
                 print(f"      intento {intento}/{INTENTOS} fallido ({error}); reintentando")
 
     raise requests.RequestException(f"no se pudo descargar {url}: {ultimo_error}")
+
+
+def descargar_zonas(verificar_solo: bool) -> bool:
+    """Descarga la tabla de zonas de la TLC (LocationID a nombre de zona).
+
+    Es un CSV pequeno y fijo, no depende del anio. Si ya existe y no esta
+    vacio no se vuelve a descargar. Devuelve True si queda disponible.
+    """
+    print("\n=== ZONAS (taxi_zone_lookup.csv) ===")
+    if RUTA_ZONAS.exists() and RUTA_ZONAS.stat().st_size > 0:
+        print("  ya existe, se omite")
+        return True
+    if verificar_solo:
+        print("  FALTA (modo --verify-only)")
+        return False
+    RUTA_ZONAS.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        respuesta = requests.get(URL_ZONAS, timeout=TIEMPO_ESPERA)
+        respuesta.raise_for_status()
+    except requests.RequestException as error:
+        print(f"  ERROR: {error}")
+        return False
+    if not respuesta.content:
+        print("  ERROR: el servidor devolvio un archivo vacio")
+        return False
+    RUTA_ZONAS.write_bytes(respuesta.content)
+    print(f"  listo ({formato_tamanio(len(respuesta.content))}) -> {RUTA_ZONAS}")
+    return True
 
 
 def procesar(tipo: str, anio: int, verificar_solo: bool) -> dict:
@@ -246,6 +278,8 @@ def main() -> int:
     tipos = TIPOS_TAXI if argumentos.taxi == "all" else (argumentos.taxi,)
     anios = sorted(set(argumentos.years))
 
+    zonas_ok = descargar_zonas(argumentos.verify_only)
+
     total = {"descargados": 0, "omitidos": 0, "redescargados": 0, "no_publicados": [], "fallidos": []}
     for tipo in tipos:
         for anio in anios:
@@ -270,7 +304,7 @@ def main() -> int:
     print("=" * 60)
 
     completo = verificar_completitud(tipos, anios)
-    return 0 if completo and not total["fallidos"] else 1
+    return 0 if completo and zonas_ok and not total["fallidos"] else 1
 
 
 if __name__ == "__main__":

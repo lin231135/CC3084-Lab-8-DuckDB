@@ -191,7 +191,13 @@ docker exec lab8-lab python scripts/download_data.py --verify-only
 
 El script le pregunta al servidor que meses estan publicados, descarga solo los
 que faltan o estan danados, y al final imprime una verificacion de completitud
-(meses publicados contra archivos legibles). Volver a ejecutarlo no re-descarga
+(meses publicados contra archivos legibles). Ademas descarga una vez la tabla de
+zonas de la TLC (`data/raw/zonas/taxi_zone_lookup.csv`), que se usa para nombrar
+las zonas en el analisis. Para tener 2024 y 2026 juntos:
+
+```bash
+docker exec lab8-lab python scripts/download_data.py --years 2024 2026
+``` Volver a ejecutarlo no re-descarga
 lo que ya esta bien. Al 12 de octubre de 2026 la TLC tenia publicados de enero a
 agosto de 2026, y por eso las comparaciones entre anios se hacen sobre los mismos
 meses. El detalle de los cambios, las pruebas y los resultados esta en
@@ -214,6 +220,37 @@ docker exec lab8-lab sh -c "cd /workspace/notebooks && jupyter nbconvert --to no
 Las rutas dentro de los archivos `.sql` son las del contenedor (`/workspace/data/...`).
 La explicacion de cada consulta y las decisiones tomadas estan en
 [docs/ejercicio_03.md](docs/ejercicio_03.md).
+
+Los ejercicios 4 y 5 siguen el mismo esquema (consultas en `sql/ejercicio_04/` y
+`sql/ejercicio_05/`, notebooks `ejercicio_04_analisis_exploratorio.ipynb` y
+`ejercicio_05_incorporacion_2024.ipynb`, documentacion en
+[docs/ejercicio_04.md](docs/ejercicio_04.md) y [docs/ejercicio_05.md](docs/ejercicio_05.md)).
+
+### Ejecutar las consultas desde la terminal
+
+`scripts/ejecutar_sql.py` corre todos los `.sql` de una carpeta, con las vistas
+primero. Sirve para reproducir resultados y para comprobar que las consultas
+siguen funcionando cuando cambian los datos:
+
+```bash
+V="sql/ejercicio_03/00_vista_viajes.sql sql/ejercicio_04/00_vistas_apoyo.sql"
+
+# todos los anios que haya en data/raw
+docker exec lab8-lab python scripts/ejecutar_sql.py sql/ejercicio_05 --vistas $V
+
+# solo 2026 (reproduce los numeros documentados de los ejercicios 3 y 4)
+docker exec lab8-lab python scripts/ejecutar_sql.py sql/ejercicio_04 --vistas $V --anios 2026
+
+# guardar resultados y compararlos despues con otra corrida
+docker exec lab8-lab python scripts/ejecutar_sql.py sql/ejercicio_04 --vistas $V --anios 2026 --salida data/processed/resultados/ej04
+docker exec lab8-lab python scripts/ejecutar_sql.py sql/ejercicio_04 --vistas $V --anios 2026 --comparar data/processed/resultados/ej04 --silencioso
+```
+
+Las vistas leen todos los anios de `data/raw` y respetan la variable de DuckDB
+`anios` (`SET VARIABLE anios = [2024, 2026];`), asi que no hay que editar SQL para
+acotar un analisis. El ejecutor limita DuckDB a 4 hilos y 2 GB de memoria
+(`--hilos`, `--memoria`), porque los percentiles exactos sobre decenas de millones
+de filas agotan la memoria del contenedor, que comparte unos 5 GB con Metabase.
 
 ## Como reproducir los benchmarks
 

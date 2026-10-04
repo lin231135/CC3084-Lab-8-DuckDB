@@ -4,7 +4,7 @@
 
 Todas las consultas están en `sql/ejercicio_03/`, un archivo por consulta, y el notebook `notebooks/ejercicio_03_consultas_parquet.ipynb` las lee desde ahí, muestra el SQL y guarda el resultado de su ejecución, de modo que cada consulta existe en un solo lugar y este documento la referencia por nombre de archivo. Ninguna consulta importa los datos a una tabla, todas leen los Parquet con `read_parquet`, `glob`, `parquet_schema` o `parquet_file_metadata`. Los datos son los 16 archivos de 2026 (enero a agosto, amarillos y verdes) que descargamos en el ejercicio 2, y todos los números de este documento salen de ejecutar esos archivos dentro del contenedor `lab8-lab`.
 
-Una decisión que tomamos desde el principio fue crear una vista llamada `viajes` (`00_vista_viajes.sql`) que une amarillos y verdes con nombres de columna comunes (`pickup`, `dropoff`, y las demás sin cambios). Una vista en DuckDB no copia nada, solo guarda la consulta, así que cada vez que se usa vuelve a leer los Parquet, y por eso nos pareció compatible con la idea del ejercicio de consultar sin importar. La razón para usarla es práctica, porque las consultas de calidad se repetirían con el mismo bloque de unión en cada archivo y si algo cambia, como veremos cuando entre 2024, hay un solo lugar donde corregirlo.
+Una decisión que tomamos desde el principio fue crear una vista llamada `viajes` (`00_vista_viajes.sql`) que une amarillos y verdes con nombres de columna comunes (`pickup`, `dropoff`, y las demás sin cambios). Una vista en DuckDB no copia nada, solo guarda la consulta, así que cada vez que se usa vuelve a leer los Parquet, y por eso nos pareció compatible con la idea del ejercicio de consultar sin importar. La razón para usarla es práctica, porque las consultas de calidad se repetirían con el mismo bloque de unión en cada archivo y si algo cambia, como veremos cuando entre 2024, hay un solo lugar donde corregirlo. Una aclaración importante es que, cuando escribimos este ejercicio, la vista solo existía para 2026; después, al incorporar 2024 en el ejercicio 5, la generalizamos para que lea todos los años de `data/raw` y respete una variable de sesión `anios`, y por eso el notebook de este ejercicio fija `SET VARIABLE anios = [2026]` y los resultados de este documento siguen siendo los de 2026. En esa generalización las reglas de fecha de `3_6a` y `3_7a` pasaron de un rango fijo de 2026 a uno relativo al año del archivo, y la columna `fuera_de_2026_01_a_08` de `3_6a` se llama ahora `fuera_del_anio_del_archivo`, con los mismos valores. Las consultas `3_1` a `3_5` leen directamente la carpeta de 2026 y no cambiaron.
 
 ## 3.1 Cantidad de archivos
 
@@ -51,7 +51,7 @@ Resumimos primero lo encontrado y luego lo discutimos. Los porcentajes son sobre
 
 | Problema | Amarillos | Verdes | Consulta |
 |---|---|---|---|
-| Pickup fuera de enero a agosto de 2026 | 17 (mínimo 2001-01-01) | 14 (mínimo 2008-12-31) | `3_6a_calidad_fechas.sql` |
+| Pickup fuera del año del archivo (2026) | 17 (mínimo 2001-01-01) | 14 (mínimo 2008-12-31) | `3_6a_calidad_fechas.sql` |
 | Pickup fuera del mes del archivo | 146 | 98 | `3_6a_calidad_fechas.sql` |
 | Bajada antes de la subida | 10 | 5 | `3_6b_calidad_duracion.sql` |
 | Duración cero | 371,673 (1.25%) | 229 (0.07%) | `3_6b_calidad_duracion.sql` |
