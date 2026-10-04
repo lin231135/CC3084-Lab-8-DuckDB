@@ -254,8 +254,80 @@ de filas agotan la memoria del contenedor, que comparte unos 5 GB con Metabase.
 
 ## Como reproducir los benchmarks
 
-<!-- TODO (Ejercicio 6) -->
+El benchmark compara consultar los Parquet directamente contra una tabla
+materializada en DuckDB (Ejercicio 6). Necesita los datos descargados
+(`scripts/download_data.py`) y el ambiente levantado. Para medir sin interferencia
+conviene detener Metabase, que ademas debe estar detenido mientras se escribe la
+base (un `.duckdb` admite un solo proceso con permiso de escritura):
+
+```bash
+docker compose stop metabase
+
+# construye (o completa) data/processed/taxis.duckdb y mide las 7 consultas de sql/ejercicio_06
+docker exec lab8-lab python scripts/benchmark_parquet_vs_tabla.py
+
+# otros volumenes (anios o meses separados por comas) y mas repeticiones
+docker exec lab8-lab python scripts/benchmark_parquet_vs_tabla.py --volumenes 2026-08 2026 2024,2026 --repeticiones 5
+
+# solo cargar la tabla, o rehacerla desde cero
+docker exec lab8-lab python scripts/benchmark_parquet_vs_tabla.py --solo-construir
+docker exec lab8-lab python scripts/benchmark_parquet_vs_tabla.py --reconstruir --solo-construir
+```
+
+La carga de la tabla es incremental: al descargar un anio nuevo solo se insertan
+los meses que faltan. El script deja `docs/benchmark_resultados.csv` (mediana,
+minimo, maximo y desviacion por volumen, consulta y estrategia),
+`docs/benchmark_entorno.json` y `docs/benchmark_carga_tabla.json`, y comprueba que
+las dos estrategias devuelven el mismo resultado. Con 20 meses de datos y la
+configuracion por defecto (5 repeticiones, 5 volumenes) tarda unos 30 minutos. Los
+resultados y su analisis estan en [docs/ejercicio_06.md](docs/ejercicio_06.md).
 
 ## Como generar los resultados principales
 
-<!-- TODO -->
+Los resultados principales son el analisis documentado en `docs/`, el benchmark y
+el tablero. Con el ambiente levantado y los datos descargados, la secuencia
+completa desde cero es esta:
+
+```bash
+# 1. datos (2024 y 2026; el script omite lo que ya existe)
+docker exec lab8-lab python scripts/download_data.py --years 2024 2026
+
+# 2. tabla materializada y benchmark (con Metabase detenido)
+docker compose stop metabase
+docker exec lab8-lab python scripts/benchmark_parquet_vs_tabla.py
+
+# 3. vistas del tablero dentro de la base (tambien con Metabase detenido)
+docker exec lab8-lab python scripts/preparar_vistas_tablero.py
+
+# 4. tablero en Metabase
+docker compose start metabase
+docker exec lab8-lab python scripts/montar_tablero_metabase.py
+
+# 5. graficas de los indicadores como PNG (docs/img/tablero)
+docker exec lab8-lab python scripts/generar_indicadores.py
+```
+
+### Tablero en Metabase
+
+Abrir <http://127.0.0.1:3000> e iniciar sesion con el usuario local del
+laboratorio, que crea `montar_tablero_metabase.py` y solo existe en este Metabase
+(escucha unicamente en 127.0.0.1):
+
+| Usuario | Clave |
+|---|---|
+| `lab8@example.com` | `Taxis-NYC-Lab8-2026` |
+
+El tablero "Taxis de Nueva York: indicadores" esta en la coleccion "Lab 8 DuckDB".
+Metabase se conecta a `/workspace/data/processed/taxis.duckdb` en modo `read_only`,
+con la ruta de dentro del contenedor, como indica la nota sobre DuckDB mas arriba.
+Cada pregunta del tablero es SQL nativo tomado de `sql/ejercicio_07/`. Si el
+montaje falla al crear la coleccion, volver a ejecutar el script: es un error
+conocido de la configuracion inicial de Metabase y el script ya reintenta.
+
+Si se reconstruye la tabla con Metabase encendido, la base queda bloqueada
+(`Could not set lock on file`). Detener Metabase, reconstruir, ejecutar de nuevo
+`preparar_vistas_tablero.py` y volver a iniciarlo.
+
+El analisis de cada ejercicio, con sus consultas, resultados e interpretacion, esta
+en `docs/ejercicio_01.md` a `docs/ejercicio_07.md`; el tablero se explica en
+[docs/ejercicio_07.md](docs/ejercicio_07.md).
