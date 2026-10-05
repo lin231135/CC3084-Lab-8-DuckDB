@@ -11,6 +11,7 @@ Uso (dentro del contenedor lab, desde /workspace):
     python scripts/ejecutar_sql.py sql/ejercicio_04 --vistas ... --salida data/processed/resultados/ej04
     python scripts/ejecutar_sql.py sql/ejercicio_04 --vistas ... --solo 4_1_ 4_8_
     python scripts/ejecutar_sql.py sql/ejercicio_04 --vistas ... --anios 2024 2026
+    python scripts/ejecutar_sql.py sql/ejercicio_08 --base data/processed/taxis.duckdb
 
 Comportamiento:
   - Los archivos de --vistas se ejecutan primero y en el orden dado. Los
@@ -47,6 +48,9 @@ def main() -> int:
                         help="carpeta donde guardar el resultado de cada consulta en CSV")
     parser.add_argument("--comparar", type=Path, default=None,
                         help="carpeta con CSV de una corrida anterior para comparar resultados")
+    parser.add_argument("--base", type=Path, default=None,
+                        help="en lugar de leer los Parquet, usar esta base .duckdb en modo solo lectura "
+                             "(por ejemplo data/processed/taxis.duckdb, que ya trae las vistas del tablero)")
     parser.add_argument("--anios", type=int, nargs="+", default=None, metavar="ANIO",
                         help="anios a incluir en las vistas (por defecto, todos los que haya en data/raw)")
     parser.add_argument("--hilos", type=int, default=4,
@@ -60,7 +64,7 @@ def main() -> int:
     pd.set_option("display.width", 250)
     pd.set_option("display.max_columns", 40)
 
-    con = duckdb.connect()
+    con = duckdb.connect(str(argumentos.base), read_only=True) if argumentos.base else duckdb.connect()
     # Con 8 hilos y sin limite, los percentiles exactos sobre 28 millones de
     # filas agotaron la memoria del contenedor (unos 5 GB compartidos con Metabase).
     con.execute(f"SET threads = {argumentos.hilos}")

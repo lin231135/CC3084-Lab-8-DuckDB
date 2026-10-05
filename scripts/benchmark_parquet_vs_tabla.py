@@ -21,6 +21,7 @@ Uso (dentro del contenedor lab, desde /workspace):
     python scripts/benchmark_parquet_vs_tabla.py --volumenes 2024,2025,2026 --repeticiones 3
     python scripts/benchmark_parquet_vs_tabla.py --reconstruir          # rehace la tabla
     python scripts/benchmark_parquet_vs_tabla.py --reconstruir --solo-construir   # solo la carga
+    python scripts/benchmark_parquet_vs_tabla.py --solo-consultas 6_6 --agregar  # vuelve a medir una consulta
 
 Un volumen es una lista de anios (2024) o meses (2026-08) separados por comas.
 
@@ -194,6 +195,9 @@ def main() -> int:
     parser.add_argument("--calentamiento", type=int, default=1, help="ejecuciones previas que no cuentan (1)")
     parser.add_argument("--base", type=Path, default=BASE_POR_DEFECTO, help="archivo .duckdb de la tabla")
     parser.add_argument("--reconstruir", action="store_true", help="borra y vuelve a crear la tabla")
+    parser.add_argument("--agregar", action="store_true",
+                        help="mezclar con el CSV existente: reemplaza solo las combinaciones de volumen y "
+                             "consulta medidas ahora y conserva las demas")
     parser.add_argument("--solo-construir", action="store_true",
                         help="construir o completar la tabla y terminar, sin medir consultas")
     parser.add_argument("--solo-consultas", nargs="*", default=None, metavar="PREFIJO",
@@ -276,6 +280,17 @@ def main() -> int:
 
     columnas = ["volumen", "meses", "filas", "mb_parquet", "consulta", "estrategia", "primera_s", "mediana_s",
                 "minimo_s", "maximo_s", "desviacion_s", "repeticiones", "resultado_igual", "error"]
+    volumenes_entorno = list(argumentos.volumenes)
+    if argumentos.agregar and argumentos.salida.exists():
+        with argumentos.salida.open(encoding="utf-8") as f:
+            previas = list(csv.DictReader(f))
+        nuevas = {(str(fila["volumen"]), fila["consulta"]) for fila in resumen}
+        resumen = [fila for fila in previas if (fila["volumen"], fila["consulta"]) not in nuevas] + resumen
+        resumen.sort(key=lambda fila: (int(fila["meses"]), fila["volumen"],
+                                       orden_natural(Path(fila["consulta"])), fila["estrategia"]))
+        if JSON_ENTORNO.exists():
+            anteriores = json.loads(JSON_ENTORNO.read_text(encoding="utf-8")).get("volumenes", [])
+            volumenes_entorno = anteriores + [v for v in volumenes_entorno if v not in anteriores]
     argumentos.salida.parent.mkdir(parents=True, exist_ok=True)
     with argumentos.salida.open("w", newline="", encoding="utf-8") as f:
         escritor = csv.DictWriter(f, fieldnames=columnas, extrasaction="ignore")
@@ -290,7 +305,7 @@ def main() -> int:
     JSON_ENTORNO.write_text(json.dumps({
         "duckdb": duckdb.__version__, "hilos": argumentos.hilos, "memoria": argumentos.memoria,
         "repeticiones": argumentos.repeticiones, "calentamiento": argumentos.calentamiento,
-        "volumenes": argumentos.volumenes,
+        "volumenes": volumenes_entorno,
         # si la tabla ya existia, se informa la ultima carga real que se midio
         "carga_tabla": (json.loads(JSON_CARGA.read_text(encoding="utf-8"))
                         if carga["meses_insertados"] == 0 and JSON_CARGA.exists() else carga),

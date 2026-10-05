@@ -1,0 +1,7 @@
+volumen,meses,filas,mb_parquet,consulta,estrategia,primera_s,mediana_s,minimo_s,maximo_s,desviacion_s,repeticiones,resultado_igual,error
+"2024,2025,2026",32,121184384,1977.0,6_3_top_zonas_origen,parquet,3.014,2.754,2.676,2.923,0.083,5,si,
+"2024,2025,2026",32,121184384,1977.0,6_4_mediana_distancia_y_duracion,parquet,29.157,29.281,26.572,31.813,1.849,5,si,
+"2024,2025,2026",32,121184384,1977.0,6_7_zona_especifica,parquet,3.502,2.887,2.741,3.444,0.248,5,si,
+"2024,2025,2026",32,121184384,1977.0,6_3_top_zonas_origen,tabla,6.004,1.199,1.143,1.297,0.056,5,si,
+"2024,2025,2026",32,121184384,1977.0,6_4_mediana_distancia_y_duracion,tabla,67.91,22.331,18.589,28.05,3.797,5,si,
+"2024,2025,2026",32,121184384,1977.0,6_7_zona_especifica,tabla,4.829,0.664,0.551,0.797,0.078,5,si,

@@ -72,7 +72,7 @@ def dibujar(eje, ind: dict, datos: pd.DataFrame):
     if ind["display"] == "line":
         for i, col in enumerate(ancho.columns):
             color, trazo, opacidad = estilo_serie(str(col), i)
-            eje.plot(ancho.index.astype(str) if ancho.index.dtype == object else ancho.index,
+            eje.plot(range(len(ancho.index)) if not pd.api.types.is_numeric_dtype(ancho.index) else ancho.index,
                      ancho[col], label=str(col), color=color, linestyle=trazo, alpha=opacidad, linewidth=1.8)
     elif ind["display"] in ("bar", "row"):
         if ind.get("apilado") == "normalized":
@@ -86,8 +86,16 @@ def dibujar(eje, ind: dict, datos: pd.DataFrame):
         eje.tick_params(axis="x", rotation=0 if horizontal else 30)
     if ind.get("apilado") == "normalized":
         eje.legend(fontsize=7, frameon=False, loc="upper left", bbox_to_anchor=(1.0, 1.0))
+    elif ind["display"] == "line" and ancho.shape[1] > 4:
+        # con seis series la leyenda tapa las lineas: va debajo de la grafica
+        eje.legend(fontsize=7, frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=3)
     else:
         eje.legend(fontsize=7, frameon=False)
+    if ind["display"] == "line" and not pd.api.types.is_numeric_dtype(ancho.index) and len(ancho.index) > 8:
+        # etiquetas de texto (p. ej. 2025-01): se muestran espaciadas para que no se amontonen
+        paso = max(1, len(ancho.index) // 8)
+        eje.set_xticks(range(0, len(ancho.index), paso))
+        eje.set_xticklabels([str(m) for m in ancho.index[::paso]], rotation=30, ha="right")
     eje.spines[["top", "right"]].set_visible(False)
     eje.grid(axis="y" if ind["display"] != "row" else "x", alpha=0.25)
     eje.set_xlabel("")

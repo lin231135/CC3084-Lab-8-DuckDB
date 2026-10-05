@@ -112,10 +112,9 @@ Los archivos de datos descargados **no** deben incluirse.
 
 # Documentacion del equipo
 
-Las siguientes secciones deben ser completadas por cada equipo. El README final
-debe permitir que una persona que no participo en el desarrollo pueda levantar el
-ambiente, descargar los datos, ejecutar el analisis, reproducir los benchmarks y
-generar los resultados principales.
+Las siguientes secciones explican como levantar el ambiente, descargar los datos,
+ejecutar el analisis, reproducir los benchmarks y generar los resultados principales,
+y al final enlazan a la documentacion de cada ejercicio y resumen lo que encontramos.
 
 ## Como levantar el ambiente
 
@@ -175,62 +174,68 @@ servicio, las versiones instaladas y el proposito de cada directorio esta en
 Los datos salen de los Parquet mensuales que publica la TLC. El script
 `scripts/download_data.py` corre dentro del contenedor `lab` (con el ambiente
 levantado, ver la seccion anterior) y guarda cada archivo en
-`data/raw/<tipo>/<anio>/`.
+`data/raw/<tipo>/<anio>/`. Para tener los tres anios del laboratorio:
+
+```bash
+docker exec lab8-lab python scripts/download_data.py --years 2024 2025 2026
+```
+
+Otras formas de usarlo:
 
 ```bash
 # amarillos y verdes de 2026 (valor por defecto)
 docker exec lab8-lab python scripts/download_data.py
 
 # otros anios y/o un solo tipo de taxi
-docker exec lab8-lab python scripts/download_data.py --years 2024 2026
 docker exec lab8-lab python scripts/download_data.py --years 2025 --taxi green
 
 # solo verificar lo que hay en disco contra el servidor, sin descargar
 docker exec lab8-lab python scripts/download_data.py --verify-only
 ```
 
-El script le pregunta al servidor que meses estan publicados, descarga solo los
-que faltan o estan danados, y al final imprime una verificacion de completitud
-(meses publicados contra archivos legibles). Ademas descarga una vez la tabla de
-zonas de la TLC (`data/raw/zonas/taxi_zone_lookup.csv`), que se usa para nombrar
-las zonas en el analisis. Para tener 2024 y 2026 juntos:
+El script le pregunta al servidor que meses estan publicados, descarga solo los que
+faltan o estan danados, y al final imprime una verificacion de completitud (meses
+publicados contra archivos legibles). Volver a ejecutarlo no re-descarga lo que ya
+esta bien. Ademas descarga una vez la tabla de zonas de la TLC
+(`data/raw/zonas/taxi_zone_lookup.csv`), que se usa para nombrar las zonas en el
+analisis.
 
-```bash
-docker exec lab8-lab python scripts/download_data.py --years 2024 2026
-``` Volver a ejecutarlo no re-descarga
-lo que ya esta bien. Al 12 de octubre de 2026 la TLC tenia publicados de enero a
-agosto de 2026, y por eso las comparaciones entre anios se hacen sobre los mismos
-meses. El detalle de los cambios, las pruebas y los resultados esta en
-[docs/ejercicio_02.md](docs/ejercicio_02.md).
+Al 12 de octubre de 2026 la TLC tenia publicados 2024 y 2025 completos y de enero a
+agosto de 2026, por lo que los datos son 32 meses por tipo de taxi (121,184,384
+viajes y unos 2 GB de Parquet) y las comparaciones entre anios se hacen sobre los
+mismos meses. El detalle de los cambios, las pruebas y los resultados esta en
+[docs/ejercicio_02.md](docs/ejercicio_02.md), [docs/ejercicio_05.md](docs/ejercicio_05.md)
+y [docs/ejercicio_08.md](docs/ejercicio_08.md).
 
 ## Como ejecutar el analisis
 
 Las consultas viven en `sql/`, organizadas por ejercicio, y los notebooks en
-`notebooks/` las leen desde ahi en lugar de copiarlas. Con el ambiente levantado
-y los datos descargados, hay dos formas de ejecutar el Ejercicio 3:
+`notebooks/` las leen desde ahi en lugar de copiarlas. Con el ambiente levantado y
+los datos descargados, los notebooks se pueden abrir en JupyterLab
+(<http://127.0.0.1:8888/lab>) o ejecutar desde la terminal:
 
 ```bash
-# desde JupyterLab: abrir http://127.0.0.1:8888/lab y correr
-#   notebooks/ejercicio_03_consultas_parquet.ipynb
-
-# o desde la terminal, ejecutando el notebook completo
 docker exec lab8-lab sh -c "cd /workspace/notebooks && jupyter nbconvert --to notebook --execute --inplace ejercicio_03_consultas_parquet.ipynb"
 ```
 
-Las rutas dentro de los archivos `.sql` son las del contenedor (`/workspace/data/...`).
-La explicacion de cada consulta y las decisiones tomadas estan en
-[docs/ejercicio_03.md](docs/ejercicio_03.md).
+| Ejercicio | Notebook | Consultas | Documentacion |
+|---|---|---|---|
+| 3. Consultas directas sobre Parquet | `ejercicio_03_consultas_parquet.ipynb` | `sql/ejercicio_03/` | [docs/ejercicio_03.md](docs/ejercicio_03.md) |
+| 4. Analisis exploratorio | `ejercicio_04_analisis_exploratorio.ipynb` | `sql/ejercicio_04/` | [docs/ejercicio_04.md](docs/ejercicio_04.md) |
+| 5. Incorporacion de 2024 | `ejercicio_05_incorporacion_2024.ipynb` | `sql/ejercicio_05/` | [docs/ejercicio_05.md](docs/ejercicio_05.md) |
+| 8. Los tres anios | `ejercicio_08_tres_anios.ipynb` | `sql/ejercicio_08/` | [docs/ejercicio_08.md](docs/ejercicio_08.md) |
 
-Los ejercicios 4 y 5 siguen el mismo esquema (consultas en `sql/ejercicio_04/` y
-`sql/ejercicio_05/`, notebooks `ejercicio_04_analisis_exploratorio.ipynb` y
-`ejercicio_05_incorporacion_2024.ipynb`, documentacion en
-[docs/ejercicio_04.md](docs/ejercicio_04.md) y [docs/ejercicio_05.md](docs/ejercicio_05.md)).
+Las rutas dentro de los archivos `.sql` son las del contenedor (`/workspace/data/...`).
+Los notebooks de los ejercicios 3 y 4 fijan `SET VARIABLE anios = [2026]` para
+reproducir los numeros documentados, que se calcularon cuando solo habia datos de
+2026. El notebook del ejercicio 5 conserva los resultados de cuando habia 2024 y
+2026, y el del ejercicio 8 usa la tabla con los tres anios.
 
 ### Ejecutar las consultas desde la terminal
 
 `scripts/ejecutar_sql.py` corre todos los `.sql` de una carpeta, con las vistas
-primero. Sirve para reproducir resultados y para comprobar que las consultas
-siguen funcionando cuando cambian los datos:
+primero. Sirve para reproducir resultados y para comprobar que las consultas siguen
+funcionando cuando cambian los datos:
 
 ```bash
 V="sql/ejercicio_03/00_vista_viajes.sql sql/ejercicio_04/00_vistas_apoyo.sql"
@@ -244,57 +249,65 @@ docker exec lab8-lab python scripts/ejecutar_sql.py sql/ejercicio_04 --vistas $V
 # guardar resultados y compararlos despues con otra corrida
 docker exec lab8-lab python scripts/ejecutar_sql.py sql/ejercicio_04 --vistas $V --anios 2026 --salida data/processed/resultados/ej04
 docker exec lab8-lab python scripts/ejecutar_sql.py sql/ejercicio_04 --vistas $V --anios 2026 --comparar data/processed/resultados/ej04 --silencioso
+
+# las consultas del ejercicio 8 leen la tabla materializada (ver la seccion de benchmarks)
+docker exec lab8-lab python scripts/ejecutar_sql.py sql/ejercicio_08 --base data/processed/taxis.duckdb
 ```
 
 Las vistas leen todos los anios de `data/raw` y respetan la variable de DuckDB
 `anios` (`SET VARIABLE anios = [2024, 2026];`), asi que no hay que editar SQL para
-acotar un analisis. El ejecutor limita DuckDB a 4 hilos y 2 GB de memoria
-(`--hilos`, `--memoria`), porque los percentiles exactos sobre decenas de millones
-de filas agotan la memoria del contenedor, que comparte unos 5 GB con Metabase.
+acotar un analisis. El ejecutor limita DuckDB a 4 hilos y 2 GB de memoria (`--hilos`,
+`--memoria`), porque los percentiles exactos sobre decenas de millones de filas
+agotan la memoria del contenedor, que comparte unos 5 GB con Metabase. Con los tres
+anios algunas consultas con muchos percentiles sobre los Parquet tardan varios
+minutos (ver [docs/ejercicio_08.md](docs/ejercicio_08.md)).
 
 ## Como reproducir los benchmarks
 
 El benchmark compara consultar los Parquet directamente contra una tabla
-materializada en DuckDB (Ejercicio 6). Necesita los datos descargados
-(`scripts/download_data.py`) y el ambiente levantado. Para medir sin interferencia
-conviene detener Metabase, que ademas debe estar detenido mientras se escribe la
-base (un `.duckdb` admite un solo proceso con permiso de escritura):
+materializada en DuckDB (Ejercicio 6). Necesita los datos descargados y el ambiente
+levantado. Para medir sin interferencia conviene detener Metabase, que ademas debe
+estar detenido mientras se escribe la base (un `.duckdb` admite un solo proceso con
+permiso de escritura):
 
 ```bash
 docker compose stop metabase
 
 # construye (o completa) data/processed/taxis.duckdb y mide las 7 consultas de sql/ejercicio_06
-docker exec lab8-lab python scripts/benchmark_parquet_vs_tabla.py
-
-# otros volumenes (anios o meses separados por comas) y mas repeticiones
-docker exec lab8-lab python scripts/benchmark_parquet_vs_tabla.py --volumenes 2026-08 2026 2024,2026 --repeticiones 5
+docker exec lab8-lab python scripts/benchmark_parquet_vs_tabla.py --volumenes 2026-08 2026-06,2026-07,2026-08 2026 2024 2024,2026 2024,2025,2026
 
 # solo cargar la tabla, o rehacerla desde cero
 docker exec lab8-lab python scripts/benchmark_parquet_vs_tabla.py --solo-construir
 docker exec lab8-lab python scripts/benchmark_parquet_vs_tabla.py --reconstruir --solo-construir
+
+# volver a medir solo una consulta sin perder el resto del CSV
+docker exec lab8-lab python scripts/benchmark_parquet_vs_tabla.py --volumenes 2024,2025,2026 --solo-consultas 6_6 --agregar
+
+# probar con mas memoria para DuckDB
+docker exec lab8-lab python scripts/benchmark_parquet_vs_tabla.py --volumenes 2024,2025,2026 --memoria 4GB --salida data/processed/otra_memoria.csv
 ```
 
-La carga de la tabla es incremental: al descargar un anio nuevo solo se insertan
-los meses que faltan. El script deja `docs/benchmark_resultados.csv` (mediana,
-minimo, maximo y desviacion por volumen, consulta y estrategia),
-`docs/benchmark_entorno.json` y `docs/benchmark_carga_tabla.json`, y comprueba que
-las dos estrategias devuelven el mismo resultado. Con 20 meses de datos y la
-configuracion por defecto (5 repeticiones, 5 volumenes) tarda unos 30 minutos. Los
-resultados y su analisis estan en [docs/ejercicio_06.md](docs/ejercicio_06.md).
+Un volumen es una lista de anios (`2024`) o meses (`2026-08`) separados por comas. La
+carga de la tabla es incremental: al descargar un anio nuevo solo se insertan los
+meses que faltan. El script deja `docs/benchmark_resultados.csv` (mediana, minimo,
+maximo y desviacion por volumen, consulta y estrategia), `docs/benchmark_entorno.json`
+y `docs/benchmark_carga_tabla.json`, y comprueba que las dos estrategias devuelven el
+mismo resultado. Con 32 meses de datos y la configuracion por defecto (5
+repeticiones, 6 volumenes) tarda cerca de una hora. Los resultados y su analisis
+estan en [docs/ejercicio_06.md](docs/ejercicio_06.md).
 
 ## Como generar los resultados principales
 
-Los resultados principales son el analisis documentado en `docs/`, el benchmark y
-el tablero. Con el ambiente levantado y los datos descargados, la secuencia
-completa desde cero es esta:
+Los resultados principales son el analisis documentado en `docs/`, el benchmark y el
+tablero. Con el ambiente levantado, la secuencia completa desde cero es esta:
 
 ```bash
-# 1. datos (2024 y 2026; el script omite lo que ya existe)
-docker exec lab8-lab python scripts/download_data.py --years 2024 2026
+# 1. datos (el script omite lo que ya existe)
+docker exec lab8-lab python scripts/download_data.py --years 2024 2025 2026
 
 # 2. tabla materializada y benchmark (con Metabase detenido)
 docker compose stop metabase
-docker exec lab8-lab python scripts/benchmark_parquet_vs_tabla.py
+docker exec lab8-lab python scripts/benchmark_parquet_vs_tabla.py --volumenes 2026-08 2026-06,2026-07,2026-08 2026 2024 2024,2026 2024,2025,2026
 
 # 3. vistas del tablero dentro de la base (tambien con Metabase detenido)
 docker exec lab8-lab python scripts/preparar_vistas_tablero.py
@@ -309,9 +322,9 @@ docker exec lab8-lab python scripts/generar_indicadores.py
 
 ### Tablero en Metabase
 
-Abrir <http://127.0.0.1:3000> e iniciar sesion con el usuario local del
-laboratorio, que crea `montar_tablero_metabase.py` y solo existe en este Metabase
-(escucha unicamente en 127.0.0.1):
+Abrir <http://127.0.0.1:3000> e iniciar sesion con el usuario local del laboratorio,
+que crea `montar_tablero_metabase.py` y solo existe en este Metabase (escucha
+unicamente en 127.0.0.1):
 
 | Usuario | Clave |
 |---|---|
@@ -319,15 +332,56 @@ laboratorio, que crea `montar_tablero_metabase.py` y solo existe en este Metabas
 
 El tablero "Taxis de Nueva York: indicadores" esta en la coleccion "Lab 8 DuckDB".
 Metabase se conecta a `/workspace/data/processed/taxis.duckdb` en modo `read_only`,
-con la ruta de dentro del contenedor, como indica la nota sobre DuckDB mas arriba.
-Cada pregunta del tablero es SQL nativo tomado de `sql/ejercicio_07/`. Si el
-montaje falla al crear la coleccion, volver a ejecutar el script: es un error
-conocido de la configuracion inicial de Metabase y el script ya reintenta.
+con la ruta de dentro del contenedor, como indica la nota sobre DuckDB mas arriba, y
+con 3 GB de memoria para DuckDB (con 1 GB las preguntas eran mucho mas lentas). Cada
+pregunta del tablero es SQL nativo tomado de `sql/ejercicio_07/`. La captura del
+tablero esta en `docs/img/tablero/metabase_tablero.png` y las graficas generadas con
+matplotlib en `docs/img/tablero/`.
 
-Si se reconstruye la tabla con Metabase encendido, la base queda bloqueada
-(`Could not set lock on file`). Detener Metabase, reconstruir, ejecutar de nuevo
-`preparar_vistas_tablero.py` y volver a iniciarlo.
+Problemas conocidos y como resolverlos:
 
-El analisis de cada ejercicio, con sus consultas, resultados e interpretacion, esta
-en `docs/ejercicio_01.md` a `docs/ejercicio_07.md`; el tablero se explica en
-[docs/ejercicio_07.md](docs/ejercicio_07.md).
+| Sintoma | Causa | Solucion |
+|---|---|---|
+| `montar_tablero_metabase.py` falla al crear la coleccion | Error de la configuracion inicial de Metabase | Volver a ejecutarlo, ya reintenta solo |
+| `Could not set lock on file` al construir la tabla | Metabase tiene la base abierta | `docker compose stop metabase`, reconstruir y volver a iniciarlo |
+| El cambio de memoria de DuckDB en Metabase falla | DuckDB no permite otra configuracion sobre un archivo ya abierto | `docker compose restart metabase` y volver a ejecutar el script |
+| `Cannot allocate memory` en una consulta de percentiles | Demasiados percentiles exactos a la vez | Pedirlos como lista en una sola llamada y usar `--hilos 4 --memoria 2GB` |
+
+## Estructura final y documentacion
+
+```text
+.
++-- data/raw/<tipo>/<anio>/    Parquet de la TLC y data/raw/zonas (no van a Git)
++-- data/processed/            taxis.duckdb y resultados intermedios (no van a Git)
++-- sql/ejercicio_03 a 08/     una consulta por archivo
++-- notebooks/                 notebooks ejecutados de los ejercicios 3, 4, 5 y 8
++-- scripts/                   descarga, ejecutor de SQL, benchmark y tablero
++-- docs/                      un documento por ejercicio, resultados del benchmark e imagenes
++-- Dockerfile, metabase.Dockerfile, docker-compose.yml, requirements.txt
+```
+
+| Documento | Contenido |
+|---|---|
+| [docs/ejercicio_01.md](docs/ejercicio_01.md) | Ambiente, inventario de herramientas, proposito de cada directorio |
+| [docs/ejercicio_02.md](docs/ejercicio_02.md) | Sistema de descarga y verificacion de completitud |
+| [docs/ejercicio_03.md](docs/ejercicio_03.md) | Consultas directas sobre Parquet y problemas de calidad |
+| [docs/ejercicio_04.md](docs/ejercicio_04.md) | Analisis exploratorio y hallazgos |
+| [docs/ejercicio_05.md](docs/ejercicio_05.md) | Incorporacion de 2024 y cambios en las consultas |
+| [docs/ejercicio_06.md](docs/ejercicio_06.md) | Parquet contra tabla materializada |
+| [docs/ejercicio_07.md](docs/ejercicio_07.md) | Indicadores y tablero |
+| [docs/ejercicio_08.md](docs/ejercicio_08.md) | Los tres anios y sus patrones |
+| [docs/ejercicio_09.md](docs/ejercicio_09.md) | Discusion |
+
+## Resultados principales
+
+Con los tres anios (121,184,384 viajes) encontramos cuatro cosas que resumimos aqui y
+que se explican en los documentos. Los taxis verdes y amarillos son dos servicios
+distintos y no versiones grandes y pequenas del mismo: los verdes pierden viajes cada
+anio (10% menos en 2025 y 14% menos en 2026 por dia) y concentran el 40% de sus
+viajes en dos zonas de East Harlem, mientras que los amarillos tuvieron su maximo en
+2025. La tarifa flexible, que no registra pasajeros ni propina, paso de 9.5% a 26.0%
+de los viajes amarillos entre 2024 y 2026, sobre todo durante 2025. El total mediano
+de los amarillos tiene un escalon en diciembre de 2025 que viene de la tarifa del
+taximetro y no de los recargos. Y en el benchmark, una tabla materializada fue de 1.4 a
+6.7 veces mas rapida que leer Parquet mientras cupo en la memoria de DuckDB, pero con
+32 meses y 2 GB perdio toda su ventaja, que recupero con 4 GB.

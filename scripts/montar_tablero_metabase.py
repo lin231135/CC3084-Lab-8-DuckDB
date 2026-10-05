@@ -40,6 +40,12 @@ NOMBRE_BASE = "Taxis NYC (DuckDB)"
 NOMBRE_COLECCION = "Lab 8 DuckDB"
 NOMBRE_TABLERO = "Taxis de Nueva York: indicadores"
 ARCHIVO_DUCKDB = "/workspace/data/processed/taxis.duckdb"
+# Memoria de DuckDB dentro de Metabase. Con 1 GB las consultas sobre la tabla de 3.4 GB
+# eran lentas (ver docs/ejercicio_06.md, seccion 6.9); la maquina virtual de Docker
+# tiene unos 5 GB, que Metabase comparte con su propia JVM.
+MEMORIA_DUCKDB = "3GB"
+DETALLES_DUCKDB = {"database_file": ARCHIVO_DUCKDB, "read_only": True, "memory_limit": MEMORIA_DUCKDB,
+                   "old_implicit_casting": True}
 
 
 class Metabase:
@@ -120,9 +126,11 @@ def main() -> int:
         print("Registrando la base DuckDB (solo lectura)...")
         base = mb.pedir("POST", "/api/database", json={
             "engine": "duckdb", "name": NOMBRE_BASE, "is_full_sync": True, "auto_run_queries": True,
-            "details": {"database_file": ARCHIVO_DUCKDB, "read_only": True, "memory_limit": "1GB",
-                        "old_implicit_casting": True},
+            "details": DETALLES_DUCKDB,
         })
+    elif base.get("details", {}).get("memory_limit") != MEMORIA_DUCKDB:
+        print(f"Actualizando el limite de memoria de DuckDB en Metabase a {MEMORIA_DUCKDB}...")
+        base = mb.pedir("PUT", f"/api/database/{base['id']}", json={"details": DETALLES_DUCKDB})
     id_base = base["id"]
     mb.pedir("POST", f"/api/database/{id_base}/sync_schema")
     for _ in range(40):
